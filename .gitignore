@@ -1,0 +1,12 @@
+node_modules
+*.log
+example
+
+# test cover
+.nyc_output
+coverage
+
+# tsc
+/lib
+/dist
+**/tsconfig.tsbuildinfo

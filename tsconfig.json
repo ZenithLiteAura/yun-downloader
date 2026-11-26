@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "$*": ["./src/*"]
+    },
+    "target": "es2025",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals"],
+    "jsx": "react-jsx",
+    "noEmit": true
+  }
+}
