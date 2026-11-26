@@ -6,6 +6,7 @@ import { AlbumAdapter } from './adapter/album'
 import { DjradioAdapter, type ProgramSong } from './adapter/djradio'
 import { PlaylistAdapter } from './adapter/playlist'
 import { downloadSongWithInk } from './download/progress/ink'
+import { saveSongLyric } from './lyric'
 import type { Song } from '$define'
 
 /**
@@ -52,6 +53,8 @@ export interface DownloadSongOptions {
   retryTimes: number
   skipExists: boolean
   skipTrial: boolean
+  // 下载歌词(.lrc)
+  lyric?: boolean
 }
 
 export function downloadSong(options: DownloadSongOptions & { progress?: boolean }) {
@@ -64,7 +67,7 @@ export function downloadSong(options: DownloadSongOptions & { progress?: boolean
 }
 
 export async function downloadSongPlain(options: DownloadSongOptions) {
-  const { url, file, song, totalLength, retryTimeout, retryTimes, skipExists, skipTrial } = options
+  const { url, file, song, totalLength, retryTimeout, retryTimes, skipExists, skipTrial, lyric } = options
 
   if (song.isFreeTrial && skipTrial) {
     console.log(`${logSymbols.warning} ${song.index}/${totalLength} 跳过试听 ${file}`)
@@ -92,6 +95,22 @@ export async function downloadSongPlain(options: DownloadSongOptions) {
   }
 
   console.log(`${logSymbols.success} ${song.index}/${totalLength} ${skip ? '下载跳过' : '下载成功'} ${file}`)
+
+  // 歌词
+  if (lyric) {
+    const result = await saveSongLyric({ song, file, skipExists })
+    const prefix = `${song.index}/${totalLength}`
+    const { status } = result
+    if (status === 'saved') {
+      console.log(`${logSymbols.success} ${prefix} 歌词已保存 ${result.file}`)
+    } else if (status === 'skipped') {
+      console.log(`${logSymbols.info} ${prefix} 歌词跳过 ${result.file}`)
+    } else if (status === 'empty') {
+      console.log(`${logSymbols.warning} ${prefix} 无歌词 ${file}`)
+    } else {
+      console.log(`${logSymbols.error} ${prefix} 歌词下载失败 ${file}`)
+    }
+  }
 }
 
 /**

@@ -33,7 +33,7 @@ export abstract class BaseAdapter {
   /**
    * get songs detail
    */
-  getSongsFromData<T extends { name: string; playUrlInfo?: SongPlayUrlInfo }>(songDatas: T[]): Song[] {
+  getSongsFromData<T extends { id: number; name: string; playUrlInfo?: SongPlayUrlInfo }>(songDatas: T[]): Song[] {
     // e.g 100 songDatas -> len = 3
     const len = String(songDatas.length).length
 
@@ -48,6 +48,9 @@ export abstract class BaseAdapter {
       }
 
       return {
+        // 歌曲 id, 用于获取歌词
+        id: songData.id,
+
         // 歌手
         singer: (get(songData, 'ar.0.name') as string) || (get(songData, 'artists.0.name') as string) || '',
 

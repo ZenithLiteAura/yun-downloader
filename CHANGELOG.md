@@ -1,5 +1,12 @@
 # 更新记录
 
+## Unreleased
+
+- feat: add `-l, --lyric`, 下载歌词为同目录同名 `.lrc`
+  - 首行写入 `[by:ZenithLiteAura]`
+  - 原词 + 翻译按时间轴交错 (`[mm:ss.xx]`), 无翻译时只写原词
+  - 已存在歌词默认跳过, `--skip false` 覆盖
+
 ## 2024-05-13 v3.5.1
 
 - update deps

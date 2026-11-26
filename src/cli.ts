@@ -73,6 +73,7 @@ yargs(hideBin(process.argv))
           q: 'quality',
           s: 'skip',
           p: 'progress',
+          l: 'lyric',
         })
         .options({
           concurrency: {
@@ -124,6 +125,12 @@ yargs(hideBin(process.argv))
             default: false,
           },
 
+          lyric: {
+            desc: '下载歌词(.lrc)',
+            type: 'boolean',
+            default: false,
+          },
+
           cookie: {
             desc: 'cookie文件',
             type: 'string',
@@ -141,6 +148,7 @@ yargs(hideBin(process.argv))
         .example('$0 7392714527', '使用 id 下载歌单')
         .example('$0 -c 10 <url>', '10首同时下载')
         .example('$0 -f ":singer - :songName.:ext" <url>', '下载文件名为 "歌手 - 歌名"')
+        .example('$0 -l <url>', '同时下载歌词(.lrc)')
         .epilog('帮助 & 文档: https://github.com/magicdawn/yun-playlist-downloader')
     },
     (options) => {
@@ -161,6 +169,7 @@ type ExpectedArgv = {
   skip: boolean
   progress: boolean
   cover: boolean
+  lyric: boolean
   cookie: string
   skipTrial: boolean
 }
@@ -175,6 +184,7 @@ async function defaultCommandAction(options: ExpectedArgv) {
     skip: skipExists,
     progress,
     cover,
+    lyric,
     cookie,
     skipTrial,
   } = options
@@ -204,6 +214,7 @@ async function defaultCommandAction(options: ExpectedArgv) {
     ['skip', skipExists, '跳过已下载正常文件'],
     ['progress', progress, '显示进度条'],
     ['cover', cover, '下载封面'],
+    ['lyric', lyric, '下载歌词'],
     ['cookie', cookie, 'cookie文件'],
     ['skip-trial', skipTrial, '跳过试听歌曲'],
   )
@@ -276,6 +287,7 @@ async function defaultCommandAction(options: ExpectedArgv) {
         progress,
         skipExists,
         skipTrial,
+        lyric,
       })
     },
     concurrency,

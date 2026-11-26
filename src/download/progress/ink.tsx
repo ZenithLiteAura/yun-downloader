@@ -5,18 +5,22 @@ import Spinner from 'ink-spinner'
 import logSymbols from 'log-symbols'
 import { useEffect, useMemo, useState } from 'react'
 import { proxy, useSnapshot } from 'valtio'
+import { saveSongLyric, type LyricStatus } from '$lyric'
 import type { DownloadSongOptions } from '$index'
 
 type CompletedItem = DownloadSongOptions & {
   index: number
   success: boolean
   skip?: boolean
+  lyricStatus?: LyricStatus
 }
 type RunningItem = DownloadSongOptions & {
   index: number
   progress: number
   retry?: number
   started: number
+  // 下载歌词阶段
+  phase?: 'download' | 'lyric'
 }
 
 const store = proxy<{ completed: CompletedItem[]; running: RunningItem[] }>({
@@ -25,7 +29,7 @@ const store = proxy<{ completed: CompletedItem[]; running: RunningItem[] }>({
 })
 
 export async function downloadSongWithInk(options: DownloadSongOptions) {
-  const { url, file, song, totalLength, retryTimeout, retryTimes, skipExists, skipTrial } = options
+  const { url, file, song, totalLength, retryTimeout, retryTimes, skipExists, skipTrial, lyric } = options
 
   renderApp()
   const index = song.rawIndex
@@ -38,7 +42,7 @@ export async function downloadSongWithInk(options: DownloadSongOptions) {
   }
 
   // 类似 Promise, 状态转换只能发生一次
-  const moveToComplete = once((payload: Pick<CompletedItem, 'success' | 'skip'>) => {
+  const moveToComplete = once((payload: Pick<CompletedItem, 'success' | 'skip' | 'lyricStatus'>) => {
     // running
     const idx = store.running.findIndex((x) => x.index === index)
     if (idx !== -1) store.running.splice(idx, 1)
@@ -47,8 +51,8 @@ export async function downloadSongWithInk(options: DownloadSongOptions) {
   })
 
   // 成功, 可能会调用多次, 不知为何
-  const success = once(() => {
-    moveToComplete({ success: true, skip })
+  const success = once((lyricStatus?: LyricStatus) => {
+    moveToComplete({ success: true, skip, lyricStatus })
   })
 
   // 失败
@@ -82,7 +86,12 @@ export async function downloadSongWithInk(options: DownloadSongOptions) {
       skipExists,
       onprogress({ percent }) {
         if (percent === 1) {
-          success()
+          // 需要下载歌词时, 等歌词结束再标记完成, 避免先刷出完成行
+          if (lyric) {
+            updateRunningItem({ progress: 1 })
+          } else {
+            success()
+          }
         } else {
           downloading(percent)
         }
@@ -100,7 +109,14 @@ export async function downloadSongWithInk(options: DownloadSongOptions) {
     return
   }
 
-  success()
+  // 歌词
+  let lyricStatus: LyricStatus | undefined
+  if (lyric) {
+    updateRunningItem({ phase: 'lyric', progress: 1 })
+    lyricStatus = (await saveSongLyric({ song, file, skipExists })).status
+  }
+
+  success(lyricStatus)
 }
 
 let inkInstance: Instance | undefined
@@ -143,7 +159,7 @@ function App() {
                 <Spinner type='dots' />
               </Text>
             )}{' '}
-            {item.song.index}/{item.totalLength} 下载中
+            {item.song.index}/{item.totalLength} {item.phase === 'lyric' ? '获取歌词中' : '下载中'}
             {'   '}
             <ProgressBar progress={item.progress} /> {`(${Math.round(item.progress * 100)}%)`.padStart(5, ' ')}{' '}
             {item.retry ? `第${item.retry}次重试中 ` : null}
@@ -163,7 +179,13 @@ function CompletedItemDisplay({ item }: { item: CompletedItem }) {
 
   const statusText = useMemo(() => {
     if (item.song.isFreeTrial && item.skipTrial) return '跳过试听'
-    return item.success ? (item.skip ? '下载跳过' : '下载成功') : '下载失败'
+    if (!item.success) return '下载失败'
+
+    let text = item.skip ? '下载跳过' : '下载成功'
+    if (item.lyricStatus === 'saved') text += ' +歌词'
+    else if (item.lyricStatus === 'empty') text += ' (无歌词)'
+    else if (item.lyricStatus === 'failed') text += ' (歌词失败)'
+    return text
   }, [item])
 
   return (

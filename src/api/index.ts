@@ -3,7 +3,7 @@ import Api from 'NeteaseCloudMusicApi'
 import pmap from 'promise.map'
 import { COOKIE_CONTENT } from '$auth/cookie'
 import { baseDebug } from '$common'
-import type { Album, DjradioProgram, Playlist, SongData, SongPlayUrlInfo } from '$define'
+import type { Album, DjradioProgram, LyricResponse, Playlist, SongData, SongPlayUrlInfo } from '$define'
 
 const debug = baseDebug.extend('api:index')
 
@@ -121,6 +121,41 @@ export async function songUrl(ids: Id[], quality?: string | number) {
   const chunks = chunk(ids, BATCH_ID_SIZE)
   const infosArr = await pmap(chunks, (chunk) => singleRequest(chunk.join(',')), BATCH_ID_CONCURRENCY)
   return infosArr.flat()
+}
+
+/**
+ * 歌词
+ *
+ * lv/tv/rv = -1 表示全部返回: 原词/翻译/罗马音, 体积很小
+ * 无歌词时网易返回 uncollected: true, lrc.lyric = "[00:00.00]暂无歌词"
+ * 网易偶发 502(read ECONNRESET), 歌词是尽力而为, 这里简单重试几次
+ */
+export async function songLyric(id: Id) {
+  // 类型声明里只写了 { id }, 接口本身支持 lv/tv/rv
+  type LyricQuery = Parameters<typeof Api.lyric>[0] & { lv?: number; tv?: number; rv?: number }
+  const query: LyricQuery = {
+    ...getApiBaseConfig(),
+    id: String(id),
+    lv: -1,
+    tv: -1,
+    rv: -1,
+  }
+
+  const RETRY_TIMES = 3
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= RETRY_TIMES; attempt++) {
+    try {
+      const res = await handleRequestLimit(Api.lyric, `lyric(${id})`)(query as Parameters<typeof Api.lyric>[0])
+      return res.body as LyricResponse
+    } catch (e) {
+      lastError = e
+      debug('songLyric(%s) failed, attempt %s/%s: %O', id, attempt, RETRY_TIMES, e)
+      if (attempt < RETRY_TIMES) await delay(500 * attempt)
+    }
+  }
+
+  throw lastError
 }
 
 /**

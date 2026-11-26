@@ -15,6 +15,7 @@
 
 - [x] 支持歌单 / 专辑 / 电台
 - [x] 音质选择
+- [x] 下载歌词, 原词/翻译按时间轴交错 (见 `-l, --lyric`)
 - [x] 下载超时 / 重试
 - [x] 再次下载默认跳过已下载部分, 使用 `content-length` 匹配
 - [x] 自定义文件名
@@ -55,10 +56,12 @@ Usage: yun <url> [options]
   -q, --quality       音质                                                [数字]
   -s, --skip          对于已存在文件且大小合适则跳过                      [布尔]
   -p, --progress      是否显示进度条                                      [布尔]
+  -l, --lyric         下载歌词(.lrc)                           [布尔] [默认值: false]
 
 示例：
   yun -c 10 <url>                          10首同时下载
   yun -f ":singer - :songName.:ext" <url>  下载格式为 "歌手 - 歌名"
+  yun -l <url>                             同时下载歌词(.lrc)
 
 帮助 & 文档: https://github.com/magicdawn/yun-playlist-downloader
 ```
@@ -120,6 +123,30 @@ Usage: yun <url> [options]
 
 - 默认 `true`, 显示进度条, 使用 `false` 不显示进度条
 - 使用了模块 [ascii-progress](https://github.com/bubkoo/ascii-progress), 问题比较多, 比如非 tty, 在控制台输入一些东西进度显示就乱了, 故提供选项关闭该特性
+
+### `-l, --lyric` 下载歌词
+
+- 默认 `false`, 开启后每首歌下载完成时一并下载歌词
+- 歌词文件与音频文件**同目录同名**, 后缀换成 `.lrc`, 例如 `歌单/歌手 - 歌名.mp3` → `歌单/歌手 - 歌名.lrc`
+- 歌词取自网易云该歌曲自身, 不依赖第三方歌词站; VIP 歌曲配合 `--cookie` 同样适用
+- 文件格式:
+  - 第一行是作者 tag: `[by:ZenithLiteAura]`
+  - 原词与翻译按时间轴交错, 同一时间戳先原词、紧跟一行翻译; 没有翻译时只输出原词
+  - 时间轴统一为 `[mm:ss.xx]`, 间奏的空时间轴保留
+
+```
+[by:ZenithLiteAura]
+[00:00.00]作曲 : Ayase
+[00:00.46]I leap out of the same routine I am living day by day
+[00:00.46]我跳出日复一日的日程
+[00:17.43]
+[00:23.81]Greenery, shining view
+[00:23.81]绿意盎然 风景优美
+```
+
+- 已存在且非空的 `.lrc` 默认跳过; 使用 `--skip false` 强制覆盖重写
+- 纯音乐/无歌词歌曲只提示, 不生成文件, 不影响其它歌曲下载
+- 也可写在 `.yunrc` 里: `{ "lyric": true }`
 
 ## `.yunrc`
 

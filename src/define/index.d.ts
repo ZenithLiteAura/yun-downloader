@@ -5,10 +5,14 @@ import type { SetRequired } from 'type-fest'
 
 export { Album } from './album.js'
 export { DjradioProgram } from './djradio.js'
+export { LyricContainer, LyricResponse } from './lyric.js'
 export { Playlist } from './playlist-detail.js'
 export { SongPlayUrlInfo } from './song-url-info.js'
 
 export type Song = {
+  // 歌曲 id, 用于获取歌词
+  id?: number
+
   // 歌手
   singer: string
 
